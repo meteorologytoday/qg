@@ -1,15 +1,12 @@
 struct Grid
 
-    Ω   :: Float64
-    R   :: Float64    # Radius of planet
-    H   :: Float64    # Atmospheric
-
-    ϕn :: Float64
-    ϕs :: Float64
-
     Nx :: Int64
     Ny :: Int64
     Nz :: Int64
+    
+    Lx   :: Float64    # atmospheric depth
+    Ly   :: Float64    # atmospheric depth
+    Lz   :: Float64    # atmospheric depth
  
     mask :: AbstractArray{Int64, 3}
 
@@ -17,6 +14,7 @@ struct Grid
     Δy_T  :: AbstractArray{Float64, 3}
     Δz_T  :: AbstractArray{Float64, 3}
 
+    Δx_U  :: AbstractArray{Float64, 3}
     Δy_U  :: AbstractArray{Float64, 3}
     Δz_U  :: AbstractArray{Float64, 3}
  
@@ -28,101 +26,92 @@ struct Grid
     Δy_W  :: AbstractArray{Float64, 3}
     Δz_W  :: AbstractArray{Float64, 3}
 
-    Δx_VW :: AbstractArray{Float64, 3}
-    Δy_VW :: AbstractArray{Float64, 3}
-    Δz_VW :: AbstractArray{Float64, 3}
-   
-    ϕ_T   :: AbstractArray{Float64, 3}
-    ϕ_U   :: AbstractArray{Float64, 3}
-    ϕ_V   :: AbstractArray{Float64, 3}
-    ϕ_W   :: AbstractArray{Float64, 3}
-    ϕ_VW   :: AbstractArray{Float64, 3}
+    Δx_UV :: AbstractArray{Float64, 3}
+    Δy_UV :: AbstractArray{Float64, 3}
+    Δz_UV :: AbstractArray{Float64, 3}
+ 
+    x_T   :: AbstractArray{Float64, 3}
+    x_U   :: AbstractArray{Float64, 3}
+    x_V   :: AbstractArray{Float64, 3}
+    x_W   :: AbstractArray{Float64, 3}
+    x_UV  :: AbstractArray{Float64, 3}
+
+    y_T   :: AbstractArray{Float64, 3}
+    y_U   :: AbstractArray{Float64, 3}
+    y_V   :: AbstractArray{Float64, 3}
+    y_W   :: AbstractArray{Float64, 3}
+    y_UV  :: AbstractArray{Float64, 3}
 
     z_T   :: AbstractArray{Float64, 3}
     z_U   :: AbstractArray{Float64, 3}
     z_V   :: AbstractArray{Float64, 3}
     z_W   :: AbstractArray{Float64, 3}
-    z_VW   :: AbstractArray{Float64, 3}
+    z_UV  :: AbstractArray{Float64, 3}
 
     Δv_T  :: AbstractArray{Float64, 3}
     ∫Δv   :: Float64
     
-    Δλ_W  :: AbstractArray{Float64, 3}
-
     function Grid(;
+        Nx    :: Int64,
         Ny    :: Int64,
-        Ω     :: Float64,
-        ϕn    :: Float64, 
-        ϕs    :: Float64,
-        H     :: Float64,
-        R     :: Float64,
+        Nz    :: Int64,
+        Lx    :: Float64,
+        Ly    :: Float64,
+        Lz    :: Float64,
     )
-
-        Nx = 1
-        Nz = 1
 
         mask = ones(Int64, Nx, Ny, Nz)
         
-        _z_T, _z_W, _Δz_T, _Δz_W = genVerticalGrid(Nz=Nz, H=H)
-        _ϕ_T, _ϕ_V, _Δϕ_T, _Δϕ_V = genHorizontalGrid(Nϕ=Ny, ϕs=ϕs, ϕn=ϕn)
+        _x_T, _x_U, _Δx_T, _Δx_U = genGrid(Nϕ=Nx, ϕs=0, ϕn=Lx, periodic=true )
+        _y_T, _y_V, _Δy_T, _Δy_V = genGrid(Nϕ=Ny, ϕs=0, ϕn=Ly, periodic=false)
+        _z_T, _z_W, _Δz_T, _Δz_W = genVerticalGrid(Nz=Nz, H=Lz)
 
-        _z_U  = copy(_z_T)
-        _Δz_U = copy(_Δz_T)
-        _ϕ_U  = copy(_ϕ_T)
-        _Δϕ_U = copy(_Δϕ_T)
+        _z_U  = copy(  _z_T )
+        _Δz_U = copy( _Δz_T )
+        
+        _y_U  = copy(  _y_T )
+        _Δy_U = copy( _Δy_T )
+
 
         z_makeMesh = (a, nx, ny) -> repeat( reshape(a, 1, 1, :), outer=(nx, ny,  1) )
         y_makeMesh = (a, nx, nz) -> repeat( reshape(a, 1, :, 1), outer=(nx, 1,  nz) )
         x_makeMesh = (a, ny, nz) -> repeat( reshape(a, :, 1, 1), outer=(1,  ny, nz) )
 
-        z_T   = z_makeMesh(_z_T,  Nx,   Ny)
-        z_U   = z_makeMesh(_z_T,  Nx+1, Ny)
-        z_V   = z_makeMesh(_z_T,  Nx,   Ny+1)
-        z_W   = z_makeMesh(_z_W,  Nx,   Ny)
-        z_VW  = z_makeMesh(_z_W,  Nx,   Ny+1)
+        z_T   = z_makeMesh(_z_T,  Nx, Ny)
+        z_U   = z_makeMesh(_z_T,  Nx, Ny)
+        z_V   = z_makeMesh(_z_T,  Nx, Ny+1)
+        z_W   = z_makeMesh(_z_W,  Nx, Ny)
+        z_UV  = z_makeMesh(_z_W,  Nx, Ny+1)
     
         Δz_T  = z_makeMesh(_Δz_T, Nx,   Ny)
-        Δz_U  = z_makeMesh(_Δz_U, Nx+1, Ny)
+        Δz_U  = z_makeMesh(_Δz_U, Nx,   Ny)
         Δz_V  = z_makeMesh(_Δz_T, Nx,   Ny+1)
         Δz_W  = z_makeMesh(_Δz_W, Nx,   Ny)
-        Δz_VW = z_makeMesh(_Δz_W, Nx,   Ny+1)
+        Δz_UV = z_makeMesh(_Δz_W, Nx,   Ny+1)
 
+        y_T   = y_makeMesh(_y_T,  Nx,   Nz  )
+        y_U   = y_makeMesh(_y_T,  Nx,   Nz  )
+        y_V   = y_makeMesh(_y_V,  Nx,   Nz  )
+        y_W   = y_makeMesh(_y_T,  Nx,   Nz+1)
+        y_UV  = y_makeMesh(_y_V,  Nx,   Nz+1)
 
-        ϕ_T   = y_makeMesh(_ϕ_T,  Nx,   Nz  )
-        ϕ_U   = y_makeMesh(_ϕ_U,  Nx+1, Nz  )
-        ϕ_V   = y_makeMesh(_ϕ_V,  Nx,   Nz  )
-        ϕ_W   = y_makeMesh(_ϕ_T,  Nx,   Nz+1)
-        ϕ_VW  = y_makeMesh(_ϕ_V,  Nx,   Nz+1)
+        Δy_T   = y_makeMesh(_Δy_T, Nx,   Nz  )
+        Δy_U   = y_makeMesh(_Δy_T, Nx,   Nz  )
+        Δy_V   = y_makeMesh(_Δy_V, Nx,   Nz  )
+        Δy_W   = y_makeMesh(_Δy_T, Nx,   Nz+1)
+        Δy_UV  = y_makeMesh(_Δy_V, Nx,   Nz+1)
 
-        Δϕ_T   = y_makeMesh(_Δϕ_T, Nx,   Nz  )
-        Δϕ_U   = y_makeMesh(_Δϕ_T, Nx+1, Nz  )
-        Δϕ_V   = y_makeMesh(_Δϕ_V, Nx,   Nz  )
-        Δϕ_W   = y_makeMesh(_Δϕ_T, Nx,   Nz+1)
-        Δϕ_VW  = y_makeMesh(_Δϕ_V, Nx,   Nz+1)
+        x_T   = x_makeMesh(_x_T,  Ny,   Nz  )
+        x_U   = x_makeMesh(_x_U,  Ny,   Nz  )
+        x_V   = x_makeMesh(_x_T,  Ny+1, Nz  )
+        x_W   = x_makeMesh(_x_T,  Ny,   Nz+1)
+        x_UV  = x_makeMesh(_x_U,  Ny+1, Nz+1)
 
-        Δλ = [2π, ]
-        Δλ_T   = x_makeMesh(Δλ, Ny,   Nz)
-        Δλ_V   = x_makeMesh(Δλ, Ny+1, Nz)
-        Δλ_W   = x_makeMesh(Δλ, Ny,   Nz+1)
-        Δλ_VW  = x_makeMesh(Δλ, Ny+1, Nz+1)
-
-        # Uncomment the following line to remove curvature effect
-        #cos(x) = 1.0
-
-        # Calculating horizontal grid edges
-        Δx_T = R * cos.(ϕ_T) .* Δλ_T;
-        Δy_T = R * Δϕ_T;
-
-        Δy_U = R * Δϕ_U;
-
-        Δx_V = R * cos.(ϕ_V) .* Δλ_V;
-        Δy_V = R * Δϕ_V;
- 
-        Δx_W = R * cos.(ϕ_W) .* Δλ_W;
-        Δy_W = R * Δϕ_W;
-
-        Δx_VW = R * cos.(ϕ_VW) .* Δλ_VW;
-        Δy_VW = R * Δϕ_VW;
+        Δx_T   = x_makeMesh(_Δx_T, Ny,  Nz  )
+        Δx_U   = x_makeMesh(_Δx_U, Ny,  Nz  )
+        Δx_V   = x_makeMesh(_Δx_T, Ny+1,Nz  )
+        Δx_W   = x_makeMesh(_Δx_T, Ny,  Nz+1)
+        Δx_UV  = x_makeMesh(_Δx_U, Ny+1,Nz+1)
 
 
         Δv_T = Δx_T .* Δy_T .* Δz_T
@@ -130,17 +119,14 @@ struct Grid
 
         
         return new(
-            
-            Ω,
-            R,
-            H,
-
-            ϕn,
-            ϕs,
 
             Nx,
             Ny,
             Nz,
+
+            Lx,
+            Ly,
+            Lz,
          
             mask,
 
@@ -148,6 +134,7 @@ struct Grid
             Δy_T,
             Δz_T,
 
+            Δx_U,
             Δy_U,
             Δz_U,
 
@@ -159,36 +146,42 @@ struct Grid
             Δy_W,
             Δz_W,
         
-            Δx_VW,
-            Δy_VW,
-            Δz_VW,
+            Δx_UV,
+            Δy_UV,
+            Δz_UV,
 
-            ϕ_T,
-            ϕ_U,
-            ϕ_V,
-            ϕ_W,
-            ϕ_VW,
+            x_T,
+            x_U,
+            x_V,
+            x_W,
+            x_UV,
+
+            y_T,
+            y_U,
+            y_V,
+            y_W,
+            y_UV,
 
             z_T,
             z_U,
             z_V,
             z_W,
-            z_VW,
+            z_UV,
 
             Δv_T,
             ∫Δv,
 
-            Δλ_W,
         ) 
         
     end
 end
 
 
-function genHorizontalGrid(;
+function genGrid(;
     Nϕ :: Int64,
     ϕs :: Float64,
     ϕn :: Float64,
+    periodic :: Bool = false,
 )
 
     ϕ_V = collect(Float64, range(ϕs, ϕn, length=Nϕ+1))
@@ -201,7 +194,12 @@ function genHorizontalGrid(;
 
     Δϕ_T .= δϕ
     Δϕ_V .= δϕ
-    
+   
+    if periodic
+        ϕ_V = ϕ_V[1:end-1]
+        Δϕ_V = Δϕ_V[1:end-1]
+    end
+ 
     return ϕ_T, ϕ_V, Δϕ_T, Δϕ_V
 
 end
