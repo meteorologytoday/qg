@@ -11,7 +11,6 @@ Bembenek, E., Straub, D. N., & Merlis, T. M. (2020). Effects of moisture in a tw
 1. Env and Grid
 2. AtmState
 3. OcnState
-4. zeta => psi invert matrix
-5. Construct dynamic core matrix and matrix operator
-6. Euler backward method / RK4
-7. Forward stepping and output
+4. Construct dynamic core matrix and matrix operator
+5. Euler backward method / RK4
+6. Forward stepping and output
