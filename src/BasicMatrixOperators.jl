@@ -12,16 +12,14 @@ struct BasicMatrixOperators
     Nx
 
     T_dim
+    U_dim
     V_dim
     W_dim
-    VW_dim
-    U_dim
 
     T_pts
+    U_pts
     V_pts
     W_pts
-    VW_pts
-    U_pts
 
     # Nomenclature:
     #
@@ -30,10 +28,9 @@ struct BasicMatrixOperators
     # U_W_T : sending variable westward from T grid to U grid
 
     T_I_T
+    U_I_U
     V_I_V
     W_I_W
-    VW_I_VW
-    U_I_U
 
     V_S_T
     V_N_T
@@ -52,16 +49,6 @@ struct BasicMatrixOperators
     W_UP_T
     W_DN_T
 
-    VW_N_W
-    VW_S_W
-    W_N_VW
-    W_S_VW
-
-    VW_UP_V
-    VW_DN_V
-    V_UP_VW
-    V_DN_VW
-
     U_W_T
     U_E_T
     U_W_U
@@ -71,7 +58,7 @@ struct BasicMatrixOperators
 
     T_E_T
     T_W_T
-    
+
     function BasicMatrixOperators(;
         Ny             :: Int64,
         Nz             :: Int64,
